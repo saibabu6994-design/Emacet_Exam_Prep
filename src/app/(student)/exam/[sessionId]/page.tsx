@@ -150,16 +150,20 @@ export default function ExamScreen() {
           }
         }
 
-        // 4. Fallbacks
+        // 4. Fallbacks (JSON file)
         if (finalQuestions.length < targetCount) {
-          setLoadingStatus("Loading prep material...");
+          const neededFromJSON = targetCount - finalQuestions.length;
+          setLoadingStatus(`Checking prep material for ${neededFromJSON} more questions...`);
           try {
             const res = await fetch('/questions.json');
             if (res.ok) {
               const fallbackQs: Question[] = await res.json();
+              console.log(`[ExamInit] Loaded ${fallbackQs.length} potential questions from JSON.`);
+              
               let filtered = fallbackQs.filter(fq => subjectIds.includes(fq.subject_id));
               if (targetTopicId) filtered = filtered.filter(fq => fq.topic_id === targetTopicId);
 
+              const startCount = finalQuestions.length;
               let fallbackIndex = 0;
               for (const fq of filtered) {
                 if (finalQuestions.length >= targetCount) break;
@@ -169,6 +173,7 @@ export default function ExamScreen() {
                   seenHashes.add(hash);
                 }
               }
+              console.log(`[ExamInit] Added ${finalQuestions.length - startCount} unique questions from JSON.`);
             }
           } catch (e) { console.error('[ExamInit] Fallback error:', e); }
         }
@@ -179,8 +184,8 @@ export default function ExamScreen() {
           setLoadingStatus(`Gemini AI is generating ${needed} unique questions...`);
           
           try {
-            // Split into batches of 30 to avoid Gemini timeouts/token limits
-            const BATCH_SIZE = 30;
+            // Further reduced batch size to ensure success on Vercel
+            const BATCH_SIZE = 15; 
             const numBatches = Math.ceil(needed / BATCH_SIZE);
             
             for (let i = 0; i < numBatches; i++) {
@@ -189,34 +194,50 @@ export default function ExamScreen() {
               
               setLoadingStatus(`Gemini AI: Batch ${i + 1}/${numBatches}...`);
               
-              const res = await fetch('/api/gemini/generate-questions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  topic_name: topicName || 'General',
-                  subject_name: subjectIds.map(id => SUBJECT_NAMES[id]).join(', '),
-                  count: currentBatchCount,
-                  difficulty: session.difficulty || 'medium',
-                }),
-              });
-              
-              if (res.ok) {
-                const data = await res.json();
-                if (data.questions && Array.isArray(data.questions)) {
-                  const aiQs = data.questions.map((q: any) => ({
-                    ...q, 
-                    id: String(q.id), 
-                    subject_id: q.subject_id || subjectIds[0] || 1
-                  }));
-                  finalQuestions = [...finalQuestions, ...aiQs];
+              // Simple retry logic
+              let success = false;
+              let attemptsCount = 0;
+              while (!success && attemptsCount < 2) {
+                attemptsCount++;
+                try {
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), 50000); // 50s timeout
+
+                  const res = await fetch('/api/gemini/generate-questions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: controller.signal,
+                    body: JSON.stringify({
+                      topic_name: topicName || 'General',
+                      subject_name: subjectIds.map(id => SUBJECT_NAMES[id]).join(', '),
+                      count: currentBatchCount,
+                      difficulty: session.difficulty || 'medium',
+                    }),
+                  });
+                  
+                  clearTimeout(timeoutId);
+
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (data.questions && Array.isArray(data.questions)) {
+                      const aiQs = data.questions.map((q: any) => ({
+                        ...q, 
+                        id: String(q.id), 
+                        subject_id: q.subject_id || subjectIds[0] || 1
+                      }));
+                      finalQuestions = [...finalQuestions, ...aiQs];
+                      success = true;
+                    }
+                  } else {
+                    console.error(`[ExamInit] AI Batch ${i} failed (Attempt ${attemptsCount})`);
+                  }
+                } catch (batchErr) {
+                  console.error(`[ExamInit] AI Batch ${i} Error (Attempt ${attemptsCount}):`, batchErr);
                 }
-              } else {
-                console.error(`[ExamInit] AI Batch ${i} failed`);
-                // Continue to next batch instead of failing entirely
               }
             }
             finalQuestions = finalQuestions.slice(0, targetCount);
-          } catch (e) { console.error('[ExamInit] AI Error:', e); }
+          } catch (e) { console.error('[ExamInit] AI Overall Error:', e); }
         }
 
         if (finalQuestions.length > 0) {
