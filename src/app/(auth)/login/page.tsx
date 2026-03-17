@@ -60,10 +60,10 @@ export default function LoginPage() {
         
         if (isAdmin) {
           console.log("Redirecting to /admin...");
-          router.push("/admin");
+          window.location.href = "/admin";
         } else {
           console.log("Redirecting to /dashboard...");
-          router.push("/dashboard");
+          window.location.href = "/dashboard";
         }
       } else {
         console.warn("Auth success but no user object returned.");

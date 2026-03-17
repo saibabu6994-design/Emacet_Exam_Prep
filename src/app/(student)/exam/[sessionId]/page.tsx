@@ -45,17 +45,15 @@ export default function ExamScreen() {
           return; 
         }
 
-        // 1. Parallel Fetch: Session & Seen Questions
+        // 1. Parallel Fetch: Session & Existing Attempts
         setLoadingStatus("Fetching session and history...");
-        console.log("[ExamInit] Fetching session and seen questions in parallel...");
-        
-        const [sessionResult, seenRefsResult] = await Promise.all([
+        const [sessionResult, attemptsResult] = await Promise.all([
           supabase.from('exam_sessions').select('*').eq('id', sessionId).single(),
-          supabase.from('seen_questions').select('question_hash').eq('student_id', user.id)
+          supabase.from('question_attempts').select('question_id, selected_answer, is_flagged').eq('session_id', sessionId)
         ]);
 
         const { data: session, error: sessErr } = sessionResult;
-        const { data: seenRefs } = seenRefsResult;
+        const { data: attempts } = attemptsResult;
 
         if (sessErr || !session) {
           console.error("[ExamInit] Session fetch error:", sessErr);
@@ -70,41 +68,78 @@ export default function ExamScreen() {
         }
 
         setSessionData(session);
-        console.log("[ExamInit] Session data loaded:", session.exam_type);
-
-        const studentId = session.student_id as string;
         const targetCount = session.total_questions || 40;
         const subjectIds: number[] = session.subject_ids || [1, 2, 3];
+        const studentId = session.student_id as string;
 
+        // 2. CHECK RESUMPTION: If attempts exist, load those questions directly
+        if (attempts && attempts.length > 0) {
+          setLoadingStatus("Resuming your session...");
+          console.log(`[ExamInit] Resuming session with ${attempts.length} existing attempts.`);
+          
+          const qIds = attempts.map(a => a.question_id);
+          const { data: resumedQs, error: resumeErr } = await supabase
+            .from('questions')
+            .select('id, question_text, option_a, option_b, option_c, option_d, correct_answer, subject_id, topic_id, difficulty, explanation, shortcut_tip')
+            .in('id', qIds);
+
+          if (resumedQs && resumedQs.length > 0) {
+            // Reconstruct questions in the original attempt order
+            let finalResumed: Question[] = [];
+            const orderFromStorage = localStorage.getItem(`exam_order_${sessionId}`);
+            const savedOrderIds = orderFromStorage ? JSON.parse(orderFromStorage) : qIds;
+            
+            savedOrderIds.forEach((id: string) => {
+              const q = resumedQs.find(rq => String(rq.id) === String(id));
+              if (q) finalResumed.push({ ...q, id: String(q.id) } as Question);
+              else if (id.startsWith('fallback-')) {
+                // Fallbacks aren't in the DB by UUID usually, and if they were they'd have been synced
+                console.warn(`[ExamInit] Could not find quesiton ${id} in DB during resumption`);
+              }
+            });
+
+            // If we found questions, finish here
+            if (finalResumed.length > 0) {
+              setQuestions(finalResumed);
+              const initialAnswers: Record<string, string | null> = {};
+              const initialFlags: Record<string, boolean> = {};
+              attempts.forEach(a => {
+                initialAnswers[a.question_id] = a.selected_answer;
+                initialFlags[a.question_id] = a.is_flagged;
+              });
+              setAnswers(initialAnswers);
+              setFlags(initialFlags);
+              hasInitialized.current = true;
+              setLoading(false);
+              return;
+            }
+          }
+          console.warn("[ExamInit] Attempts found but questions could not be retrieved from DB. Retrying full initialization.");
+        }
+
+        // 3. FULL INITIALIZATION (New Session or failed resumption)
+        setLoadingStatus("Synchronizing question history...");
+        const { data: seenRefs } = await supabase.from('seen_questions').select('question_hash').eq('student_id', user.id);
         const seenHashes = new Set<string>((seenRefs || []).map(r => r.question_hash));
-        console.log(`[ExamInit] Found ${seenHashes.size} previously seen questions.`);
-
-        // Extract topic if present in exam_type
+        
         const examType = session.exam_type as string;
         const topicName = examType.includes(':') ? examType.split(':')[1] : null;
         const targetTopicId = topicName ? TOPIC_NAME_TO_ID[topicName]?.topic_id : null;
 
-        // 2. Fetch DB questions
         setLoadingStatus("Searching question bank...");
-        console.log("[ExamInit] Fetching questions from DB...");
         let finalQuestions: Question[] = [];
-
         let query = supabase
           .from('questions')
           .select('id, question_text, option_a, option_b, option_c, option_d, correct_answer, subject_id, topic_id, difficulty, explanation, shortcut_tip')
           .in('subject_id', subjectIds);
 
-        if (targetTopicId) {
-          query = query.eq('topic_id', targetTopicId);
-        }
+        if (targetTopicId) query = query.eq('topic_id', targetTopicId);
 
-        // Fetch more than needed to account for deduplication
-        const { data: dbQuestions, error: dbErr } = await query.limit(targetCount * 5);
+        // Increased limit to account for heavy deduplication
+        const { data: dbQuestions, error: dbErr } = await query.limit(1000); 
         
-        if (dbErr) console.error("[ExamInit] DB Fetch Error:", dbErr.message);
-
         if (dbQuestions) {
-          console.log(`[ExamInit] Found ${dbQuestions.length} candidate questions in DB`);
+          console.log(`[ExamInit] Found ${dbQuestions.length} candidates in DB.`);
           for (const q of dbQuestions) {
             const hash = q.question_text.trim().toLowerCase().substring(0, 60);
             if (!seenHashes.has(hash)) {
@@ -115,21 +150,15 @@ export default function ExamScreen() {
           }
         }
 
-        console.log(`[ExamInit] Questions after DB fetch: ${finalQuestions.length}`);
-
-        // 3. Supplement with local JSON fallback
+        // 4. Fallbacks
         if (finalQuestions.length < targetCount) {
           setLoadingStatus("Loading prep material...");
-          console.log("[ExamInit] Supplementing with local JSON...");
           try {
             const res = await fetch('/questions.json');
             if (res.ok) {
               const fallbackQs: Question[] = await res.json();
               let filtered = fallbackQs.filter(fq => subjectIds.includes(fq.subject_id));
-
-              if (targetTopicId) {
-                filtered = filtered.filter(fq => fq.topic_id === targetTopicId);
-              }
+              if (targetTopicId) filtered = filtered.filter(fq => fq.topic_id === targetTopicId);
 
               let fallbackIndex = 0;
               for (const fq of filtered) {
@@ -140,78 +169,61 @@ export default function ExamScreen() {
                   seenHashes.add(hash);
                 }
               }
-            } else {
-              console.warn("[ExamInit] questions.json fetch failed:", res.status);
             }
-          } catch (e) {
-            console.error('[ExamInit] Local fallback catch:', e);
-          }
+          } catch (e) { console.error('[ExamInit] Fallback error:', e); }
         }
 
-        console.log(`[ExamInit] Questions after local JSON: ${finalQuestions.length}`);
-
-        // 4. If still short and AI source enabled, call Gemini
+        // 5. AI Generation (Batched to avoid timeouts)
         if (finalQuestions.length < targetCount && (session.source === 'AI Generated' || session.source === 'Mixed')) {
-          setLoadingStatus("Gemini AI is generating unique questions... (takes ~15s)");
-          console.log(`[ExamInit] Requesting AI questions (needed: ${targetCount - finalQuestions.length})...`);
+          const needed = targetCount - finalQuestions.length;
+          setLoadingStatus(`Gemini AI is generating ${needed} unique questions...`);
+          
           try {
-            const subjectName = subjectIds.map(id => SUBJECT_NAMES[id] || 'Physics').join(', ');
-            const needed = targetCount - finalQuestions.length;
-
-            const res = await fetch('/api/gemini/generate-questions', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                topic_name: topicName || 'General',
-                subject_name: subjectName,
-                count: needed,
-                difficulty: session.difficulty || 'medium',
-                source_contexts: [],
-              }),
-            });
-            if (res.ok) {
-              const data = await res.json();
-              if (data.questions && Array.isArray(data.questions)) {
-                console.log(`[ExamInit] Gemini successfully generated ${data.questions.length} questions`);
-                const aiQs: Question[] = (data.questions as any[])
-                  .filter(q => q.id)
-                  .map((q) => ({
-                    id: String(q.id),
-                    question_text: q.question_text,
-                    option_a: q.option_a,
-                    option_b: q.option_b,
-                    option_c: q.option_c,
-                    option_d: q.option_d,
-                    correct_answer: q.correct_answer,
-                    explanation: q.explanation,
-                    shortcut_tip: q.shortcut_tip,
-                    subject_id: subjectIds[0] || 1,
-                    difficulty: q.difficulty || 'medium',
+            // Split into batches of 30 to avoid Gemini timeouts/token limits
+            const BATCH_SIZE = 30;
+            const numBatches = Math.ceil(needed / BATCH_SIZE);
+            
+            for (let i = 0; i < numBatches; i++) {
+              const currentBatchCount = Math.min(BATCH_SIZE, targetCount - finalQuestions.length);
+              if (currentBatchCount <= 0) break;
+              
+              setLoadingStatus(`Gemini AI: Batch ${i + 1}/${numBatches}...`);
+              
+              const res = await fetch('/api/gemini/generate-questions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  topic_name: topicName || 'General',
+                  subject_name: subjectIds.map(id => SUBJECT_NAMES[id]).join(', '),
+                  count: currentBatchCount,
+                  difficulty: session.difficulty || 'medium',
+                }),
+              });
+              
+              if (res.ok) {
+                const data = await res.json();
+                if (data.questions && Array.isArray(data.questions)) {
+                  const aiQs = data.questions.map((q: any) => ({
+                    ...q, 
+                    id: String(q.id), 
+                    subject_id: q.subject_id || subjectIds[0] || 1
                   }));
-                finalQuestions = [...finalQuestions, ...aiQs].slice(0, targetCount);
+                  finalQuestions = [...finalQuestions, ...aiQs];
+                }
+              } else {
+                console.error(`[ExamInit] AI Batch ${i} failed`);
+                // Continue to next batch instead of failing entirely
               }
-            } else {
-              const errText = await res.text();
-              console.error(`[ExamInit] Gemini API error (${res.status}): ${errText}`);
             }
-          } catch (e) {
-            console.error('[ExamInit] Gemini AI catch:', e);
-          }
+            finalQuestions = finalQuestions.slice(0, targetCount);
+          } catch (e) { console.error('[ExamInit] AI Error:', e); }
         }
-
-        console.log(`[ExamInit] Final question count: ${finalQuestions.length}`);
 
         if (finalQuestions.length > 0) {
           setLoadingStatus("Finalizing preparation...");
-          if (hasInitialized.current) {
-            console.log("[ExamInit] Already initialized, skipping state update");
-            return;
-          }
-          hasInitialized.current = true;
-
-          // 5. SYNC (In background if possible, or fast)
+          
+          // Sync fallbacks to DB to get real UUIDs (important for attempts tracking)
           try {
-            console.log("[ExamInit] Syncing questions to DB...");
             const syncRes = await fetch('/api/questions/sync', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -221,9 +233,7 @@ export default function ExamScreen() {
               const syncData = await syncRes.json();
               if (syncData.questions) finalQuestions = syncData.questions;
             }
-          } catch (syncErr) {
-            console.error(`[ExamInit] Sync Error:`, syncErr);
-          }
+          } catch (syncErr) { console.error(`[ExamInit] Sync Error:`, syncErr); }
 
           // Shuffle
           for (let i = finalQuestions.length - 1; i > 0; i--) {
@@ -233,8 +243,8 @@ export default function ExamScreen() {
 
           localStorage.setItem(`exam_order_${sessionId}`, JSON.stringify(finalQuestions.map(q => q.id)));
           setQuestions(finalQuestions);
-
-          // Mark as seen (Fire and forget)
+          
+          // Mark as seen
           const seenInserts = finalQuestions
             .filter(q => typeof q.id === 'string' && !q.id.startsWith('fallback-'))
             .map(q => ({
@@ -243,35 +253,17 @@ export default function ExamScreen() {
               question_hash: q.question_text.trim().toLowerCase().substring(0, 60),
             }));
 
-          if (seenInserts.length > 0 && studentId) {
+          if (seenInserts.length > 0) {
             supabase.from('seen_questions').upsert(seenInserts, { onConflict: 'student_id,question_hash' }).then();
           }
-
-          // Load previous attempts
-          const { data: attempts } = await supabase
-            .from('question_attempts')
-            .select('question_id, selected_answer, is_flagged')
-            .eq('session_id', sessionId);
-
-          if (attempts && attempts.length > 0) {
-            const initialAnswers: Record<string, string | null> = {};
-            const initialFlags: Record<string, boolean> = {};
-            attempts.forEach(a => {
-              initialAnswers[a.question_id] = a.selected_answer;
-              initialFlags[a.question_id] = a.is_flagged;
-            });
-            setAnswers(initialAnswers);
-            setFlags(initialFlags);
-          }
+          hasInitialized.current = true;
         } else {
-          console.warn("[ExamInit] No questions found after all stages");
-          toast.error('No questions available. Please contact support.');
+          toast.error('No questions available. Please try a different subject or Mixed mode.');
         }
-
         setLoading(false);
       } catch (err: any) {
-        console.error("[ExamInit] Critical Initialization Error:", err);
-        toast.error(err.message, { id: 'exam_error' });
+        console.error("[ExamInit] Critical Error:", err);
+        toast.error(err.message);
         router.replace('/dashboard');
       }
     }
@@ -451,12 +443,28 @@ export default function ExamScreen() {
   }
 
   if (questions.length === 0) {
+    const isPastPaperOnly = sessionData?.source === 'Past Papers Only';
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 flex-col gap-4">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 flex-col gap-4 p-6 text-center">
         <Ban className="w-12 h-12 text-slate-400" />
         <h2 className="text-xl font-bold text-slate-700">No Questions Available</h2>
-        <p className="text-slate-500 text-center max-w-sm">The question bank is empty. Ask your admin to add questions or generate them via Gemini.</p>
-        <button onClick={() => router.push('/dashboard')} className="px-6 py-2 bg-indigo-600 text-white rounded-lg">Return to Dashboard</button>
+        <p className="text-slate-500 max-w-sm">
+          {sessionData?.source === 'Past Papers Only' 
+            ? "We couldn't find any past paper questions for these subjects. Try 'AI Generated' or 'Mixed' mode instead."
+            : "The question bank is empty. Ask your admin to add questions or generate them via Gemini."
+          }
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 mt-2">
+          <button onClick={() => router.push('/dashboard')} className="px-6 py-2 border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50">Return to Dashboard</button>
+          {sessionData?.source === 'Past Papers Only' && (
+            <button 
+              onClick={() => router.push('/exam/setup')} 
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-bold"
+            >
+              Change to Mixed Mode
+            </button>
+          )}
+        </div>
       </div>
     );
   }
