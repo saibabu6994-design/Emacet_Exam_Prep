@@ -1,0 +1,370 @@
+[
+  {
+    "id": "fallback-phy-001",
+    "question_text": "A body is thrown vertically upward with a velocity of 20 m/s. What is the maximum height reached? (g = 10 m/s²)",
+    "option_a": "10 m",
+    "option_b": "20 m",
+    "option_c": "40 m",
+    "option_d": "5 m",
+    "correct_answer": "B",
+    "explanation": "Using v² = u² - 2gh, at max height v=0. So h = u²/2g = 400/20 = 20 m.",
+    "shortcut_tip": "For vertical throws: h_max = u²/(2g). Memorize this directly.",
+    "subject_id": 1, "topic_id": 1, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-phy-002",
+    "question_text": "A car starts from rest and accelerates uniformly at 2 m/s² for 5 seconds. What is the distance covered?",
+    "option_a": "10 m", "option_b": "25 m", "option_c": "50 m", "option_d": "5 m",
+    "correct_answer": "B",
+    "explanation": "s = ut + ½at² = 0 + ½ × 2 × 25 = 25 m",
+    "shortcut_tip": "For starts-from-rest: s = ½at². Plug in directly.",
+    "subject_id": 1, "topic_id": 1, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-phy-003",
+    "question_text": "Newton's second law of motion states that force equals:",
+    "option_a": "mass × velocity", "option_b": "mass × displacement",
+    "option_c": "rate of change of momentum", "option_d": "mass × distance",
+    "correct_answer": "C",
+    "explanation": "F = dp/dt = rate of change of momentum. For constant mass, this becomes F = ma.",
+    "shortcut_tip": "Newton's 2nd law is fundamentally about MOMENTUM change, not just acceleration.",
+    "subject_id": 1, "topic_id": 2, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-phy-004",
+    "question_text": "A 5 kg object on a frictionless surface is acted upon by a force of 20 N. What is the acceleration?",
+    "option_a": "100 m/s²", "option_b": "4 m/s²", "option_c": "0.25 m/s²", "option_d": "25 m/s²",
+    "correct_answer": "B",
+    "explanation": "F = ma → a = F/m = 20/5 = 4 m/s²",
+    "shortcut_tip": "a = F/m. Units check: N/kg = m/s².",
+    "subject_id": 1, "topic_id": 2, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-phy-005",
+    "question_text": "What is the SI unit of electric potential?",
+    "option_a": "Ampere", "option_b": "Joule", "option_c": "Volt", "option_d": "Coulomb",
+    "correct_answer": "C",
+    "explanation": "Electric potential = energy per unit charge. V = J/C = Volt.",
+    "shortcut_tip": "Volt = Joule per Coulomb. Remember V = W/Q.",
+    "subject_id": 1, "topic_id": 3, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-phy-006",
+    "question_text": "The work done by a force of 10 N displacing a body 5 m at 60° to the force direction is:",
+    "option_a": "50 J", "option_b": "25 J", "option_c": "43.3 J", "option_d": "86.6 J",
+    "correct_answer": "B",
+    "explanation": "W = F·d·cosθ = 10 × 5 × cos60° = 50 × 0.5 = 25 J",
+    "shortcut_tip": "W = Fd cosθ. At 60°, cos60° = 0.5, so halve the product Fd.",
+    "subject_id": 1, "topic_id": 4, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-phy-007",
+    "question_text": "The de Broglie wavelength of a particle of mass m moving with velocity v is:",
+    "option_a": "h/(mv)", "option_b": "mv/h", "option_c": "h·m·v", "option_d": "h·v/m",
+    "correct_answer": "A",
+    "explanation": "λ = h/p = h/(mv) where h is Planck's constant and p = mv is the momentum.",
+    "shortcut_tip": "de Broglie: λ = h/p. Always. Momentum p = mv for slow particles.",
+    "subject_id": 1, "topic_id": 7, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-phy-008",
+    "question_text": "Two charges +2 μC and −2 μC are separated by 10 cm. What is the force between them? (k = 9×10⁹ N·m²/C²)",
+    "option_a": "7.2 N (attractive)", "option_b": "3.6 N (repulsive)",
+    "option_c": "3.6 N (attractive)", "option_d": "7.2 N (repulsive)",
+    "correct_answer": "C",
+    "explanation": "F = kq₁q₂/r² = (9×10⁹ × 2×10⁻⁶ × 2×10⁻⁶)/(0.1)² = 3.6 N. Opposite charges → attractive.",
+    "shortcut_tip": "Find magnitude first. Opposite charges always attract.",
+    "subject_id": 1, "topic_id": 3, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-phy-009",
+    "question_text": "Which of the following is a scalar quantity?",
+    "option_a": "Force", "option_b": "Torque", "option_c": "Electric field", "option_d": "Pressure",
+    "correct_answer": "D",
+    "explanation": "Pressure is force per unit area — it has magnitude only, no direction. Force, torque and electric field are vectors.",
+    "shortcut_tip": "Scalars: mass, speed, temperature, pressure, energy. If it has a direction, it's a vector.",
+    "subject_id": 1, "topic_id": 6, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-phy-010",
+    "question_text": "The time period of a simple pendulum of length L under gravity g is:",
+    "option_a": "2π√(g/L)", "option_b": "2π√(L/g)", "option_c": "π√(L/g)", "option_d": "2√(L/g)",
+    "correct_answer": "B",
+    "explanation": "T = 2π√(L/g). Derived from the SHM restoring force equation for small angles.",
+    "shortcut_tip": "T = 2π√(L/g). L on top, g below. Longer pendulum → longer period.",
+    "subject_id": 1, "topic_id": 8, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-phy-011",
+    "question_text": "A convex lens (f = 20 cm). An object is placed 60 cm from the lens. Where does the image form?",
+    "option_a": "30 cm on the same side", "option_b": "30 cm on the other side",
+    "option_c": "40 cm on the other side", "option_d": "60 cm on the other side",
+    "correct_answer": "B",
+    "explanation": "1/v - 1/u = 1/f → 1/v - 1/(-60) = 1/20 → 1/v = 1/20 - 1/60 = 2/60 → v = 30 cm",
+    "shortcut_tip": "Lens formula: 1/v - 1/u = 1/f. Object side is always negative for u.",
+    "subject_id": 1, "topic_id": 9, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-phy-012",
+    "question_text": "A resistor of 4Ω and a resistor of 12Ω are connected in parallel. The equivalent resistance is:",
+    "option_a": "16 Ω", "option_b": "8 Ω", "option_c": "3 Ω", "option_d": "48 Ω",
+    "correct_answer": "C",
+    "explanation": "1/R = 1/4 + 1/12 = 3/12 + 1/12 = 4/12. R = 3 Ω.",
+    "shortcut_tip": "Two parallel: R = R₁R₂/(R₁+R₂) = 48/16 = 3 Ω. Always less than the smaller resistor.",
+    "subject_id": 1, "topic_id": 3, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-phy-013",
+    "question_text": "The escape velocity from Earth's surface (R = 6400 km, g = 10 m/s²) is approximately:",
+    "option_a": "8 km/s", "option_b": "11.2 km/s", "option_c": "7.9 km/s", "option_d": "16 km/s",
+    "correct_answer": "B",
+    "explanation": "v_e = √(2gR) = √(2 × 10 × 6.4×10⁶) ≈ 11,314 m/s ≈ 11.2 km/s",
+    "shortcut_tip": "v_escape = √(2gR) ≈ 11.2 km/s for Earth. Orbital speed is v_escape/√2 ≈ 7.9 km/s.",
+    "subject_id": 1, "topic_id": 5, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-chem-001",
+    "question_text": "What is the hybridization of carbon in methane (CH₄)?",
+    "option_a": "sp", "option_b": "sp²", "option_c": "sp³", "option_d": "sp³d",
+    "correct_answer": "C",
+    "explanation": "Carbon in CH₄ forms 4 sigma bonds. 4 bonding pairs → sp³ hybridization, tetrahedral geometry.",
+    "shortcut_tip": "Count electron pairs (bond + lone pairs): 2=sp, 3=sp², 4=sp³.",
+    "subject_id": 2, "topic_id": 10, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-chem-002",
+    "question_text": "Period 3, Group 17 of the periodic table corresponds to which element?",
+    "option_a": "Fluorine (F)", "option_b": "Chlorine (Cl)", "option_c": "Bromine (Br)", "option_d": "Iodine (I)",
+    "correct_answer": "B",
+    "explanation": "Period 3, Group 17 = Chlorine (Cl), atomic number 17.",
+    "shortcut_tip": "Halogens (Group 17): F(9), Cl(17), Br(35), I(53). Each period adds more electrons.",
+    "subject_id": 2, "topic_id": 11, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-chem-003",
+    "question_text": "Which of the following is the strongest acid among hydrohalic acids?",
+    "option_a": "HF", "option_b": "HCl", "option_c": "HBr", "option_d": "HI",
+    "correct_answer": "D",
+    "explanation": "Acid strength of HX increases down the group as H-X bond becomes longer and weaker. HI > HBr > HCl > HF.",
+    "shortcut_tip": "Hydrohalic acids: acid strength ∝ bond length. Longer = weaker bond = stronger acid.",
+    "subject_id": 2, "topic_id": 12, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-chem-004",
+    "question_text": "1 mole of propane (C₃H₈) on complete combustion produces how many moles of CO₂?",
+    "option_a": "1", "option_b": "2", "option_c": "3", "option_d": "4",
+    "correct_answer": "C",
+    "explanation": "C₃H₈ + 5O₂ → 3CO₂ + 4H₂O. 1 mol propane → 3 mol CO₂.",
+    "shortcut_tip": "Carbon count in fuel = moles of CO₂ produced per mole fuel.",
+    "subject_id": 2, "topic_id": 13, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-chem-005",
+    "question_text": "The IUPAC name of CH₃–CH₂–OH is:",
+    "option_a": "Methanol", "option_b": "Ethanol", "option_c": "Propan-1-ol", "option_d": "Ethanal",
+    "correct_answer": "B",
+    "explanation": "2 carbons + OH group = Ethanol. Prefix eth- = 2 C, suffix -ol = OH.",
+    "shortcut_tip": "Count carbons (meth=1, eth=2, prop=3, but=4), then add suffix for functional group.",
+    "subject_id": 2, "topic_id": 14, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-chem-006",
+    "question_text": "Which gas is produced when sodium metal reacts with water?",
+    "option_a": "Oxygen", "option_b": "Carbon dioxide", "option_c": "Hydrogen", "option_d": "Nitrogen",
+    "correct_answer": "C",
+    "explanation": "2Na + 2H₂O → 2NaOH + H₂↑. Sodium displaces hydrogen from water.",
+    "shortcut_tip": "Group 1 metals + water → metal hydroxide + H₂ gas. Burns with a squeaky pop test.",
+    "subject_id": 2, "topic_id": 15, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-chem-007",
+    "question_text": "Which element has the highest electronegativity?",
+    "option_a": "Oxygen", "option_b": "Chlorine", "option_c": "Nitrogen", "option_d": "Fluorine",
+    "correct_answer": "D",
+    "explanation": "Fluorine has the highest electronegativity of all elements (Pauling scale: F = 3.98).",
+    "shortcut_tip": "Electronegativity increases right and up in the periodic table. F is top-right → highest.",
+    "subject_id": 2, "topic_id": 11, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-chem-008",
+    "question_text": "The oxidation state of Cr in K₂Cr₂O₇ is:",
+    "option_a": "+3", "option_b": "+6", "option_c": "+7", "option_d": "+4",
+    "correct_answer": "B",
+    "explanation": "2(+1) + 2x + 7(−2) = 0 → 2 + 2x − 14 = 0 → x = +6.",
+    "shortcut_tip": "Assign known oxidation states (K=+1, O=−2), then solve algebraically.",
+    "subject_id": 2, "topic_id": 16, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-chem-009",
+    "question_text": "What is the pH of a 0.01 M HCl solution?",
+    "option_a": "1", "option_b": "2", "option_c": "12", "option_d": "13",
+    "correct_answer": "B",
+    "explanation": "HCl is a strong acid — fully dissociates. [H⁺] = 0.01 = 10⁻². pH = −log[H⁺] = 2.",
+    "shortcut_tip": "For strong acids: pH = −log(concentration). 0.01 = 10⁻² → pH = 2.",
+    "subject_id": 2, "topic_id": 17, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-chem-010",
+    "question_text": "The Van't Hoff factor (i) for NaCl at full dissociation is:",
+    "option_a": "1", "option_b": "0.5", "option_c": "2", "option_d": "3",
+    "correct_answer": "C",
+    "explanation": "NaCl → Na⁺ + Cl⁻. 1 mole gives 2 moles of ions, so i = 2.",
+    "shortcut_tip": "i = particles per formula unit after dissociation. NaCl→2, CaCl₂→3, glucose→1.",
+    "subject_id": 2, "topic_id": 18, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-chem-011",
+    "question_text": "The product of Markovnikov addition of HBr to propylene (CH₃CH=CH₂) is:",
+    "option_a": "1-bromopropane", "option_b": "2-bromopropane",
+    "option_c": "1,2-dibromopropane", "option_d": "propan-1-ol",
+    "correct_answer": "B",
+    "explanation": "Markovnikov's rule: H adds to carbon with more H's, Br to carbon with fewer H's → CH₃CHBrCH₃.",
+    "shortcut_tip": "Markovnikov: 'Rich gets richer' — H⁺ goes to the carbon already richest in H atoms.",
+    "subject_id": 2, "topic_id": 14, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-chem-012",
+    "question_text": "Which compound shows geometrical isomerism?",
+    "option_a": "CH₃–CH₃", "option_b": "CH₂=CH₂", "option_c": "2-butene (CH₃CH=CHCH₃)", "option_d": "Propene (CH₃CH=CH₂)",
+    "correct_answer": "C",
+    "explanation": "Geometrical isomerism needs a C=C where each C has two different groups. 2-butene has CH₃ and H on each → cis/trans isomers.",
+    "shortcut_tip": "For GI: each double bond C must have two DIFFERENT groups. Propene terminal CH₂ has two H → disqualified.",
+    "subject_id": 2, "topic_id": 14, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-math-001",
+    "question_text": "The derivative of sin²(x) with respect to x is:",
+    "option_a": "2sin(x)", "option_b": "2cos(x)", "option_c": "sin(2x)", "option_d": "cos(2x)",
+    "correct_answer": "C",
+    "explanation": "d/dx[sin²x] = 2sinx·cosx = sin(2x) using chain rule and the identity 2sinxcosx = sin2x.",
+    "shortcut_tip": "sin²x = (1−cos2x)/2. Differentiating gives sin(2x). Or use chain rule directly.",
+    "subject_id": 3, "topic_id": 20, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-math-002",
+    "question_text": "The sum of the series 1 + 2 + 3 + ... + n is:",
+    "option_a": "n²", "option_b": "n(n+1)", "option_c": "n(n+1)/2", "option_d": "n(n−1)/2",
+    "correct_answer": "C",
+    "explanation": "Standard arithmetic series formula: Sₙ = n(n+1)/2.",
+    "shortcut_tip": "Sₙ = n(n+1)/2. For n=100: S = 5050. One of the most important formulas.",
+    "subject_id": 3, "topic_id": 21, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-math-003",
+    "question_text": "The value of ∫₀^(π/2) sin(x) dx is:",
+    "option_a": "0", "option_b": "1", "option_c": "2", "option_d": "π",
+    "correct_answer": "B",
+    "explanation": "∫sin(x)dx = −cos(x). Evaluated from 0 to π/2: −cos(π/2) + cos(0) = 0 + 1 = 1.",
+    "shortcut_tip": "∫₀^(π/2) sinx dx = 1. This standard definite integral result is worth memorizing.",
+    "subject_id": 3, "topic_id": 22, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-math-004",
+    "question_text": "If the roots of x² − 5x + 6 = 0 are α and β, then α² + β² =",
+    "option_a": "25", "option_b": "13", "option_c": "11", "option_d": "36",
+    "correct_answer": "B",
+    "explanation": "By Vieta's: α+β = 5, αβ = 6. α²+β² = (α+β)² − 2αβ = 25 − 12 = 13.",
+    "shortcut_tip": "α²+β² = (α+β)² − 2αβ. Use Vieta's formulas — never find roots individually!",
+    "subject_id": 3, "topic_id": 23, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-math-005",
+    "question_text": "sin(75°) =",
+    "option_a": "(√6 − √2)/4", "option_b": "(√6 + √2)/4", "option_c": "√3/2", "option_d": "(√3 + 1)/2",
+    "correct_answer": "B",
+    "explanation": "sin(75°) = sin(45°+30°) = sin45·cos30 + cos45·sin30 = (√6+√2)/4.",
+    "shortcut_tip": "sin(A+B) = sinAcosB + cosAsinB. Use 75° = 45° + 30° (both known angles).",
+    "subject_id": 3, "topic_id": 24, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-math-006",
+    "question_text": "The equation of a circle with centre (2, −3) and radius 5 is:",
+    "option_a": "(x−2)² + (y+3)² = 25", "option_b": "(x+2)² + (y−3)² = 25",
+    "option_c": "(x−2)² + (y+3)² = 5", "option_d": "x² + y² = 25",
+    "correct_answer": "A",
+    "explanation": "Standard form: (x−h)² + (y−k)² = r². With h=2, k=−3, r=5: (x−2)² + (y+3)² = 25.",
+    "shortcut_tip": "Note: k=−3 means (y−(−3))² = (y+3)² in the equation. Don't confuse signs!",
+    "subject_id": 3, "topic_id": 25, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-math-007",
+    "question_text": "If the mean of 5 numbers is 20 and one number is removed, the new mean is 18. What is the removed number?",
+    "option_a": "28", "option_b": "30", "option_c": "25", "option_d": "22",
+    "correct_answer": "A",
+    "explanation": "Sum of 5 = 5×20=100. Sum of 4 = 4×18=72. Removed = 100−72=28.",
+    "shortcut_tip": "Removed number = original total − new total = 100 − 72 = 28.",
+    "subject_id": 3, "topic_id": 27, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-math-008",
+    "question_text": "The slope of the line through (3, 4) and (7, 10) is:",
+    "option_a": "3/2", "option_b": "2/3", "option_c": "1", "option_d": "2",
+    "correct_answer": "A",
+    "explanation": "m = (y₂−y₁)/(x₂−x₁) = (10−4)/(7−3) = 6/4 = 3/2.",
+    "shortcut_tip": "Slope = rise/run = Δy/Δx. Always y-change over x-change.",
+    "subject_id": 3, "topic_id": 28, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-math-009",
+    "question_text": "lim(x→0) [sin(x)/x] =",
+    "option_a": "0", "option_b": "∞", "option_c": "1", "option_d": "π",
+    "correct_answer": "C",
+    "explanation": "Fundamental limit: lim(x→0) sin(x)/x = 1 when x is in radians.",
+    "shortcut_tip": "Memorize: lim(x→0) sinx/x = 1. Also: lim(x→0) tanx/x = 1. Both are standard.",
+    "subject_id": 3, "topic_id": 29, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-math-010",
+    "question_text": "The number of diagonals in a polygon with n sides is:",
+    "option_a": "n(n−3)/2", "option_b": "n(n−1)/2", "option_c": "n(n+1)/2", "option_d": "n(n−3)",
+    "correct_answer": "A",
+    "explanation": "Diagonals = ⁿC₂ − n = n(n−1)/2 − n = n(n−3)/2.",
+    "shortcut_tip": "Hexagon (n=6): 6×3/2 = 9 diagonals. Verify by drawing!",
+    "subject_id": 3, "topic_id": 26, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-math-011",
+    "question_text": "P(A) = 0.6, P(B) = 0.4, P(A∩B) = 0.2. Then P(A∪B) =",
+    "option_a": "0.6", "option_b": "0.8", "option_c": "1.0", "option_d": "0.7",
+    "correct_answer": "B",
+    "explanation": "P(A∪B) = P(A) + P(B) − P(A∩B) = 0.6 + 0.4 − 0.2 = 0.8.",
+    "shortcut_tip": "Inclusion-Exclusion: P(A∪B) = P(A) + P(B) − P(A∩B). Always subtract the overlap.",
+    "subject_id": 3, "topic_id": 30, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-math-012",
+    "question_text": "The value of ⁸C₃ is:",
+    "option_a": "56", "option_b": "336", "option_c": "84", "option_d": "168",
+    "correct_answer": "A",
+    "explanation": "⁸C₃ = 8!/(3!×5!) = (8×7×6)/(3×2×1) = 336/6 = 56.",
+    "shortcut_tip": "ⁿCᵣ: numerator starts at n, descends r times. Denominator = r!. Cancel before multiplying.",
+    "subject_id": 3, "topic_id": 26, "difficulty": "easy"
+  },
+  {
+    "id": "fallback-math-013",
+    "question_text": "In triangle ABC: a=2, b=3, C=60°. Find c.",
+    "option_a": "√7", "option_b": "√13", "option_c": "5", "option_d": "√19",
+    "correct_answer": "A",
+    "explanation": "c² = a² + b² − 2ab·cosC = 4 + 9 − 2(2)(3)(0.5) = 13 − 6 = 7. c = √7.",
+    "shortcut_tip": "Cosine rule: c² = a² + b² − 2ab·cosC. At 60°, cos60° = 0.5.",
+    "subject_id": 3, "topic_id": 24, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-math-014",
+    "question_text": "The number of ways to arrange the letters of EAMCET (with E repeated) is:",
+    "option_a": "360", "option_b": "720", "option_c": "180", "option_d": "90",
+    "correct_answer": "A",
+    "explanation": "6 letters with E repeated twice → 6!/2! = 720/2 = 360.",
+    "shortcut_tip": "Letters repeat: n!/(repeats!). EAMCET: E repeats twice → 6!/2! = 360.",
+    "subject_id": 3, "topic_id": 26, "difficulty": "medium"
+  },
+  {
+    "id": "fallback-math-015",
+    "question_text": "The derivative of eˣ with respect to x is:",
+    "option_a": "xeˣ⁻¹", "option_b": "eˣ⁺¹", "option_c": "eˣ", "option_d": "1/eˣ",
+    "correct_answer": "C",
+    "explanation": "d/dx(eˣ) = eˣ. The exponential function is its own derivative.",
+    "shortcut_tip": "d/dx(eˣ) = eˣ. d/dx(eᵃˣ) = a·eᵃˣ. Unique: equal to its own derivative.",
+    "subject_id": 3, "topic_id": 20, "difficulty": "easy"
+  }
+]
