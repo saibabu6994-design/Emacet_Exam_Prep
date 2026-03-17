@@ -31,29 +31,43 @@ export default function ExamScreen() {
   const hasInitialized = useRef(false);
   const syncInProgress = useRef(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState("Initializing...");
 
   useEffect(() => {
     async function initExam() {
+      console.log("[ExamInit] Starting initialization for session:", sessionId);
+      setLoadingStatus("Connecting to exam server...");
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) { router.replace('/login'); return; }
+        if (!user) { 
+          console.warn("[ExamInit] No user found, redirecting to login");
+          router.replace('/login'); 
+          return; 
+        }
 
         // 1. Fetch Session
+        setLoadingStatus("Fetching session details...");
+        console.log("[ExamInit] Fetching session data...");
         const { data: session, error: sessErr } = await supabase
           .from('exam_sessions')
           .select('*')
           .eq('id', sessionId)
           .single();
 
-        if (sessErr || !session) throw new Error('Session not found');
+        if (sessErr || !session) {
+          console.error("[ExamInit] Session fetch error:", sessErr);
+          throw new Error('Session not found');
+        }
 
         if (session.status === 'submitted' || session.status === 'abandoned') {
+          console.log("[ExamInit] Session already completed, redirecting to results");
           toast.error('This exam has already been submitted.', { id: 'exam_error', duration: 5000 });
           router.replace(`/exam/results/${sessionId}`);
           return;
         }
 
         setSessionData(session);
+        console.log("[ExamInit] Session data loaded:", session.exam_type);
 
         const studentId = session.student_id as string;
         const targetCount = session.total_questions || 40;
@@ -64,7 +78,9 @@ export default function ExamScreen() {
         const topicName = examType.includes(':') ? examType.split(':')[1] : null;
         const targetTopicId = topicName ? TOPIC_NAME_TO_ID[topicName]?.topic_id : null;
 
-        // 2. Fetch DB questions filtered by subject (and topic if selected)
+        // 2. Fetch DB questions
+        setLoadingStatus("Searching question bank...");
+        console.log("[ExamInit] Fetching questions from DB...");
         let finalQuestions: Question[] = [];
         const seenHashes = new Set<string>();
 
@@ -76,7 +92,6 @@ export default function ExamScreen() {
           (seenRefs || []).forEach(r => seenHashes.add(r.question_hash));
         }
 
-        // Build query
         let query = supabase
           .from('questions')
           .select('id, question_text, option_a, option_b, option_c, option_d, correct_answer, subject_id, topic_id, difficulty, explanation, shortcut_tip')
@@ -86,9 +101,12 @@ export default function ExamScreen() {
           query = query.eq('topic_id', targetTopicId);
         }
 
-        const { data: dbQuestions } = await query.limit(targetCount * 3);
+        const { data: dbQuestions, error: dbErr } = await query.limit(targetCount * 3);
+        
+        if (dbErr) console.error("[ExamInit] DB Fetch Error:", dbErr.message);
 
         if (dbQuestions) {
+          console.log(`[ExamInit] Found ${dbQuestions.length} questions in DB`);
           for (const q of dbQuestions) {
             const hash = q.question_text.trim().toLowerCase().substring(0, 60);
             if (!seenHashes.has(hash)) {
@@ -99,15 +117,18 @@ export default function ExamScreen() {
           }
         }
 
-        // 3. Supplement with local JSON fallback if needed
+        console.log(`[ExamInit] Questions after DB fetch: ${finalQuestions.length}`);
+
+        // 3. Supplement with local JSON fallback
         if (finalQuestions.length < targetCount) {
+          setLoadingStatus("Loading prep material...");
+          console.log("[ExamInit] Supplementing with local JSON...");
           try {
             const res = await fetch('/questions.json');
             if (res.ok) {
               const fallbackQs: Question[] = await res.json();
               let filtered = fallbackQs.filter(fq => subjectIds.includes(fq.subject_id));
 
-              // Filter by topic if selected
               if (targetTopicId) {
                 filtered = filtered.filter(fq => fq.topic_id === targetTopicId);
               }
@@ -121,19 +142,23 @@ export default function ExamScreen() {
                   seenHashes.add(hash);
                 }
               }
+            } else {
+              console.warn("[ExamInit] questions.json fetch failed:", res.status);
             }
           } catch (e) {
-            console.error('Local fallback failed', e);
+            console.error('[ExamInit] Local fallback catch:', e);
           }
         }
 
+        console.log(`[ExamInit] Questions after local JSON: ${finalQuestions.length}`);
+
         // 4. If still short and AI source enabled, call Gemini
         if (finalQuestions.length < targetCount && (session.source === 'AI Generated' || session.source === 'Mixed')) {
+          setLoadingStatus("Gemini AI is generating unique questions... (takes ~15s)");
+          console.log(`[ExamInit] Requesting AI questions (needed: ${targetCount - finalQuestions.length})...`);
           try {
             const subjectName = subjectIds.map(id => SUBJECT_NAMES[id] || 'Physics').join(', ');
             const needed = targetCount - finalQuestions.length;
-
-            console.log(`[ExamSession] Requesting ${needed} AI questions for ${subjectName} on topic: ${topicName || 'General'}`);
 
             const res = await fetch('/api/gemini/generate-questions', {
               method: 'POST',
@@ -149,9 +174,9 @@ export default function ExamScreen() {
             if (res.ok) {
               const data = await res.json();
               if (data.questions && Array.isArray(data.questions)) {
-                console.log(`[ExamSession] Succesfully generated ${data.questions.length} AI questions.`);
+                console.log(`[ExamInit] Gemini successfully generated ${data.questions.length} questions`);
                 const aiQs: Question[] = (data.questions as any[])
-                  .filter(q => q.id) // Ensure we only take questions that were actually saved to DB
+                  .filter(q => q.id)
                   .map((q) => ({
                     id: q.id,
                     question_text: q.question_text,
@@ -166,25 +191,29 @@ export default function ExamScreen() {
                     difficulty: q.difficulty || 'medium',
                   }));
                 finalQuestions = [...finalQuestions, ...aiQs].slice(0, targetCount);
-                console.log(`[ExamSession] Total questions after merge: ${finalQuestions.length}`);
               }
             } else {
               const errText = await res.text();
-              console.error(`[ExamSession] Gemini API error: ${errText}`);
+              console.error(`[ExamInit] Gemini API error (${res.status}): ${errText}`);
             }
           } catch (e) {
-            console.warn('[ExamSession] Gemini AI generation failed, proceeding with available questions.', e);
+            console.error('[ExamInit] Gemini AI catch:', e);
           }
         }
 
+        console.log(`[ExamInit] Final question count: ${finalQuestions.length}`);
+
         if (finalQuestions.length > 0) {
-          if (hasInitialized.current) return;
+          setLoadingStatus("Syncing with database...");
+          if (hasInitialized.current) {
+            console.log("[ExamInit] Already initialized, skipping state update");
+            return;
+          }
           hasInitialized.current = true;
 
-          // 5. SYNC: Ensure all questions (especially fallback ones) exist in DB and have UUIDs
-          // This is critical for the Detailed Review section to show all 20/160 questions.
+          // 5. SYNC
           try {
-            console.log(`[ExamSession] Syncing ${finalQuestions.length} questions to ensure DB persistence...`);
+            console.log("[ExamInit] Syncing questions to DB...");
             const syncRes = await fetch('/api/questions/sync', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -192,29 +221,22 @@ export default function ExamScreen() {
             });
             if (syncRes.ok) {
               const syncData = await syncRes.json();
-              if (syncData.questions) {
-                finalQuestions = syncData.questions;
-                console.log(`[ExamSession] Sync complete. All questions now have DB IDs.`);
-              }
-            } else {
-              console.error(`[ExamSession] Sync failed: ${await syncRes.text()}`);
+              if (syncData.questions) finalQuestions = syncData.questions;
             }
           } catch (syncErr) {
-            console.error(`[ExamSession] Error during sync:`, syncErr);
+            console.error(`[ExamInit] Sync Error:`, syncErr);
           }
 
-          // Shuffle exactly once
+          // Shuffle
           for (let i = finalQuestions.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [finalQuestions[i], finalQuestions[j]] = [finalQuestions[j], finalQuestions[i]];
           }
 
-          // Persist the order for the results page to prevent scrambling
           localStorage.setItem(`exam_order_${sessionId}`, JSON.stringify(finalQuestions.map(q => q.id)));
-
           setQuestions(finalQuestions);
 
-          // Mark DB questions as seen
+          // Mark as seen
           const seenInserts = finalQuestions
             .filter(q => typeof q.id === 'string' && !q.id.startsWith('ai-') && !q.id.startsWith('fallback-'))
             .map(q => ({
@@ -224,15 +246,13 @@ export default function ExamScreen() {
             }));
 
           if (seenInserts.length > 0 && studentId) {
-            supabase.from('seen_questions')
-              .upsert(seenInserts, { onConflict: 'student_id,question_hash' })
-              .then();
+            supabase.from('seen_questions').upsert(seenInserts, { onConflict: 'student_id,question_hash' }).then();
           }
 
-          // Load previous answers (crash recovery)
+          // Load previous attempts
           const { data: attempts } = await supabase
             .from('question_attempts')
-            .select('question_id, selected_answer, is_flagged, time_spent_seconds')
+            .select('question_id, selected_answer, is_flagged')
             .eq('session_id', sessionId);
 
           if (attempts && attempts.length > 0) {
@@ -246,11 +266,13 @@ export default function ExamScreen() {
             setFlags(initialFlags);
           }
         } else {
+          console.warn("[ExamInit] No questions found after all stages");
           toast.error('No questions available. Please contact support.');
         }
 
         setLoading(false);
       } catch (err: any) {
+        console.error("[ExamInit] Critical Initialization Error:", err);
         toast.error(err.message, { id: 'exam_error' });
         router.replace('/dashboard');
       }
@@ -313,7 +335,7 @@ export default function ExamScreen() {
     saveAnswerToDB(qId, answers[qId] || null, newValue);
   };
 
-  const submitExam = async (reason: string = 'user_submitted') => {
+  const submitExam = useCallback(async (reason: string = 'user_submitted') => {
     if (isSubmitting) return;
     setIsSubmitting(true);
     toast.loading('Calculating your score...', { id: 'submit' });
@@ -413,13 +435,19 @@ export default function ExamScreen() {
       toast.error('Failed to submit: ' + e.message, { id: 'submit' });
       setIsSubmitting(false);
     }
-  };
+  }, [sessionId, sessionData, questions, answers, flags, isSubmitting, router, supabase]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 flex-col gap-4">
-        <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
-        <p className="text-slate-500 font-medium">Loading your exam...</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 flex-col gap-6 p-4">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <Target className="w-6 h-6 text-indigo-600 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+        </div>
+        <div className="text-center space-y-2">
+          <p className="text-indigo-600 font-bold text-lg animate-pulse">{loadingStatus}</p>
+          <p className="text-slate-400 text-sm max-w-xs">Please stay on this page. Do not refresh or exit while we prepare your exam.</p>
+        </div>
       </div>
     );
   }
