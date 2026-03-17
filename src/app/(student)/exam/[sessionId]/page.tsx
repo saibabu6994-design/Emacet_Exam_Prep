@@ -178,30 +178,32 @@ export default function ExamScreen() {
           } catch (e) { console.error('[ExamInit] Fallback error:', e); }
         }
 
-        // 5. AI Generation (Batched to avoid timeouts)
+        // 5. AI Generation (Ultra-Conservative for Free Tier Rate Limits)
         if (finalQuestions.length < targetCount && (session.source === 'AI Generated' || session.source === 'Mixed')) {
           const needed = targetCount - finalQuestions.length;
           setLoadingStatus(`Gemini AI is generating ${needed} unique questions...`);
           
           try {
-            // Further reduced batch size to ensure success on Vercel
-            const BATCH_SIZE = 15; 
+            // Increased batch size to reduce total request count
+            const BATCH_SIZE = 25; 
             const numBatches = Math.ceil(needed / BATCH_SIZE);
-            
+            const allAiQs: any[] = [];
+
+            console.log(`[ExamInit] Sequential mode: ${numBatches} batches. Waiting 6s between requests to bypass Free Tier limits.`);
+
             for (let i = 0; i < numBatches; i++) {
-              const currentBatchCount = Math.min(BATCH_SIZE, targetCount - finalQuestions.length);
+              const currentBatchCount = Math.min(BATCH_SIZE, targetCount - (finalQuestions.length + allAiQs.length));
               if (currentBatchCount <= 0) break;
-              
-              setLoadingStatus(`Gemini AI: Batch ${i + 1}/${numBatches}...`);
-              
-              // Simple retry logic
+
+              setLoadingStatus(`Gemini AI: Working on Batch ${i + 1}/${numBatches}... (${Math.round((allAiQs.length / needed) * 100)}%)`);
+
               let success = false;
               let attemptsCount = 0;
-              while (!success && attemptsCount < 2) {
+              while (!success && attemptsCount < 3) {
                 attemptsCount++;
                 try {
                   const controller = new AbortController();
-                  const timeoutId = setTimeout(() => controller.abort(), 50000); // 50s timeout
+                  const timeoutId = setTimeout(() => controller.abort(), 60000);
 
                   const res = await fetch('/api/gemini/generate-questions', {
                     method: 'POST',
@@ -220,23 +222,32 @@ export default function ExamScreen() {
                   if (res.ok) {
                     const data = await res.json();
                     if (data.questions && Array.isArray(data.questions)) {
-                      const aiQs = data.questions.map((q: any) => ({
-                        ...q, 
-                        id: String(q.id), 
-                        subject_id: q.subject_id || subjectIds[0] || 1
-                      }));
-                      finalQuestions = [...finalQuestions, ...aiQs];
+                      allAiQs.push(...data.questions);
                       success = true;
                     }
-                  } else {
-                    console.error(`[ExamInit] AI Batch ${i} failed (Attempt ${attemptsCount})`);
+                  } else if (res.status === 429) {
+                    setLoadingStatus(`Gemini is busy. Waiting 10s to cool down...`);
+                    await new Promise(r => setTimeout(r, 10000));
                   }
-                } catch (batchErr) {
-                  console.error(`[ExamInit] AI Batch ${i} Error (Attempt ${attemptsCount}):`, batchErr);
+                } catch (err) {
+                  console.error(`[ExamInit] Batch ${i} Attempt ${attemptsCount} error:`, err);
+                  await new Promise(r => setTimeout(r, 3000));
                 }
               }
+
+              // Cooldown between batches to strictly stay within 15 RPM
+              if (i < numBatches - 1) {
+                await new Promise(r => setTimeout(r, 6000));
+              }
             }
-            finalQuestions = finalQuestions.slice(0, targetCount);
+            
+            finalQuestions = [...finalQuestions, ...allAiQs.map((q: any) => ({
+              ...q, 
+              id: String(q.id), 
+              subject_id: q.subject_id || subjectIds[0] || 1
+            }))].slice(0, targetCount);
+            
+            console.log(`[ExamInit] Total AI questions generated: ${finalQuestions.length}`);
           } catch (e) { console.error('[ExamInit] AI Overall Error:', e); }
         }
 
