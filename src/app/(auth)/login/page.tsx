@@ -19,35 +19,59 @@ export default function LoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log("Login attempt started for:", email);
 
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      console.log("Calling supabase.auth.signInWithPassword...");
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (authError) {
-      toast.error(authError.message);
-      setLoading(false);
-      return;
-    }
-
-    // Update last_login
-    if (authData.user) {
-      await supabase
-        .from('students')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', authData.user.id);
-      
-      const email = authData.user.email;
-      const isAdmin = email === process.env.NEXT_PUBLIC_ADMIN_EMAIL || email === 'saibabu6994@gmail.com';
-      
-      toast.success("Logged in successfully!");
-      if (isAdmin) {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
+      if (authError) {
+        console.error("Auth error caught:", authError.message);
+        toast.error(authError.message);
+        setLoading(false);
+        return;
       }
-    } else {
+
+      console.log("Auth success! User data:", authData.user?.id);
+
+      // Update last_login
+      if (authData.user) {
+        console.log("Updating last_login for user...");
+        const { error: updateError } = await supabase
+          .from('students')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', authData.user.id);
+        
+        if (updateError) {
+          console.error("Database update error (students table):", updateError.message);
+          // We continue even if update fails so the user can still log in
+        } else {
+          console.log("Last login updated successfully.");
+        }
+        
+        const userEmail = authData.user.email;
+        const isAdmin = userEmail === process.env.NEXT_PUBLIC_ADMIN_EMAIL || userEmail === 'saibabu6994@gmail.com';
+        
+        console.log("User role detected - Admin:", isAdmin);
+        toast.success("Logged in successfully!");
+        
+        if (isAdmin) {
+          console.log("Redirecting to /admin...");
+          router.push("/admin");
+        } else {
+          console.log("Redirecting to /dashboard...");
+          router.push("/dashboard");
+        }
+      } else {
+        console.warn("Auth success but no user object returned.");
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Unexpected error during login flow:", err);
+      toast.error("An unexpected error occurred. Please check the console.");
       setLoading(false);
     }
   };
