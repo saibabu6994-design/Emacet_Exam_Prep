@@ -9,24 +9,22 @@ export default async function StudentDashboardPage() {
   const { data: { session } } = await supabase.auth.getSession();
   const userId = session?.user?.id;
 
-  // Fetch Student by their auth user id (students.id = auth.user.id)
-  const { data: student } = await supabase
-    .from('students')
-    .select('*')
-    .eq('id', userId)
-    .single();
+  // 1. Parallel Fetch: student and sessions
+  const [studentRes, sessionsRes] = await Promise.all([
+    supabase.from('students').select('*').eq('id', userId).single(),
+    supabase.from('exam_sessions')
+      .select('id, score, max_score, started_at, submitted_at, status')
+      .eq('student_id', userId)
+      .eq('status', 'submitted')
+      .order('submitted_at', { ascending: true })
+  ]);
+
+  const student = studentRes.data;
+  const sessions = sessionsRes.data;
 
   // Fallback: use email from session if student row not yet created  
   const studentName = student?.full_name ?? session?.user?.email?.split('@')[0] ?? 'Student';
   const studentId = student?.id ?? userId;
-
-  // Fetch all submitted sessions
-  const { data: sessions } = await supabase
-    .from('exam_sessions')
-    .select('id, score, max_score, started_at, submitted_at, status')
-    .eq('student_id', studentId)
-    .eq('status', 'submitted')
-    .order('submitted_at', { ascending: true });
 
   const totalExams = sessions?.length || 0;
   const recentSessions = [...(sessions || [])].reverse().slice(0, 5);
@@ -68,13 +66,13 @@ export default async function StudentDashboardPage() {
     }
   }
 
-  // Fetch real weak topics from question_attempts → questions
+  // 2. Fetch real weak topics from question_attempts → questions
   const { data: wrongAttempts } = await supabase
     .from('question_attempts')
     .select('question_id, questions(subject_id, topic_id)')
-    .eq('student_id', studentId)
+    .eq('student_id', userId)
     .eq('is_correct', false)
-    .limit(200);
+    .limit(100);
 
   const topicCounts: Record<string, { subject: string; count: number }> = {};
   (wrongAttempts || []).forEach((a: any) => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { createClient } from '@/lib/supabase';
 
@@ -12,12 +12,18 @@ interface AntiCheatWrapperProps {
 
 export function AntiCheatWrapper({ children, sessionId, onAutoSubmit }: AntiCheatWrapperProps) {
   const supabase = createClient();
+  const onAutoSubmitRef = useRef(onAutoSubmit);
+
+  // Update ref when prop changes, without re-triggering effects
+  useEffect(() => {
+    onAutoSubmitRef.current = onAutoSubmit;
+  }, [onAutoSubmit]);
 
   useEffect(() => {
     // 1. Request fullscreen automatically when component mounts
     const enterFullscreen = async () => {
       try {
-        if (document.documentElement.requestFullscreen) {
+        if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
           await document.documentElement.requestFullscreen();
         }
       } catch (err) {
@@ -27,7 +33,6 @@ export function AntiCheatWrapper({ children, sessionId, onAutoSubmit }: AntiChea
     enterFullscreen();
 
     // 2. Tab/Window Switch Detection
-    // Use a ref-like variable captured in closure to avoid adding it to deps
     const handleVisibilityChange = async () => {
       if (document.hidden) {
         // Fetch the current count from DB, increment, then update
@@ -46,7 +51,7 @@ export function AntiCheatWrapper({ children, sessionId, onAutoSubmit }: AntiChea
 
         if (currentWarnings >= 3) {
           toast.error('Exam auto-submitted due to multiple tab switches.');
-          onAutoSubmit('max_warnings_exceeded');
+          onAutoSubmitRef.current('max_warnings_exceeded');
         } else {
           alert(
             `WARNING ${currentWarnings}/3: You switched tabs! Do not leave the exam window or your exam will be auto-submitted.`
@@ -76,7 +81,7 @@ export function AntiCheatWrapper({ children, sessionId, onAutoSubmit }: AntiChea
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, onAutoSubmit, supabase]);
+  }, [sessionId, supabase]);
 
   return <>{children}</>;
 }

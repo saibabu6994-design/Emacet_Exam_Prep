@@ -45,14 +45,17 @@ export default function ExamScreen() {
           return; 
         }
 
-        // 1. Fetch Session
-        setLoadingStatus("Fetching session details...");
-        console.log("[ExamInit] Fetching session data...");
-        const { data: session, error: sessErr } = await supabase
-          .from('exam_sessions')
-          .select('*')
-          .eq('id', sessionId)
-          .single();
+        // 1. Parallel Fetch: Session & Seen Questions
+        setLoadingStatus("Fetching session and history...");
+        console.log("[ExamInit] Fetching session and seen questions in parallel...");
+        
+        const [sessionResult, seenRefsResult] = await Promise.all([
+          supabase.from('exam_sessions').select('*').eq('id', sessionId).single(),
+          supabase.from('seen_questions').select('question_hash').eq('student_id', user.id)
+        ]);
+
+        const { data: session, error: sessErr } = sessionResult;
+        const { data: seenRefs } = seenRefsResult;
 
         if (sessErr || !session) {
           console.error("[ExamInit] Session fetch error:", sessErr);
@@ -73,6 +76,9 @@ export default function ExamScreen() {
         const targetCount = session.total_questions || 40;
         const subjectIds: number[] = session.subject_ids || [1, 2, 3];
 
+        const seenHashes = new Set<string>((seenRefs || []).map(r => r.question_hash));
+        console.log(`[ExamInit] Found ${seenHashes.size} previously seen questions.`);
+
         // Extract topic if present in exam_type
         const examType = session.exam_type as string;
         const topicName = examType.includes(':') ? examType.split(':')[1] : null;
@@ -82,15 +88,6 @@ export default function ExamScreen() {
         setLoadingStatus("Searching question bank...");
         console.log("[ExamInit] Fetching questions from DB...");
         let finalQuestions: Question[] = [];
-        const seenHashes = new Set<string>();
-
-        if (studentId) {
-          const { data: seenRefs } = await supabase
-            .from('seen_questions')
-            .select('question_hash')
-            .eq('student_id', studentId);
-          (seenRefs || []).forEach(r => seenHashes.add(r.question_hash));
-        }
 
         let query = supabase
           .from('questions')
@@ -101,12 +98,13 @@ export default function ExamScreen() {
           query = query.eq('topic_id', targetTopicId);
         }
 
-        const { data: dbQuestions, error: dbErr } = await query.limit(targetCount * 3);
+        // Fetch more than needed to account for deduplication
+        const { data: dbQuestions, error: dbErr } = await query.limit(targetCount * 5);
         
         if (dbErr) console.error("[ExamInit] DB Fetch Error:", dbErr.message);
 
         if (dbQuestions) {
-          console.log(`[ExamInit] Found ${dbQuestions.length} questions in DB`);
+          console.log(`[ExamInit] Found ${dbQuestions.length} candidate questions in DB`);
           for (const q of dbQuestions) {
             const hash = q.question_text.trim().toLowerCase().substring(0, 60);
             if (!seenHashes.has(hash)) {
@@ -178,7 +176,7 @@ export default function ExamScreen() {
                 const aiQs: Question[] = (data.questions as any[])
                   .filter(q => q.id)
                   .map((q) => ({
-                    id: q.id,
+                    id: String(q.id),
                     question_text: q.question_text,
                     option_a: q.option_a,
                     option_b: q.option_b,
@@ -204,14 +202,14 @@ export default function ExamScreen() {
         console.log(`[ExamInit] Final question count: ${finalQuestions.length}`);
 
         if (finalQuestions.length > 0) {
-          setLoadingStatus("Syncing with database...");
+          setLoadingStatus("Finalizing preparation...");
           if (hasInitialized.current) {
             console.log("[ExamInit] Already initialized, skipping state update");
             return;
           }
           hasInitialized.current = true;
 
-          // 5. SYNC
+          // 5. SYNC (In background if possible, or fast)
           try {
             console.log("[ExamInit] Syncing questions to DB...");
             const syncRes = await fetch('/api/questions/sync', {
@@ -236,9 +234,9 @@ export default function ExamScreen() {
           localStorage.setItem(`exam_order_${sessionId}`, JSON.stringify(finalQuestions.map(q => q.id)));
           setQuestions(finalQuestions);
 
-          // Mark as seen
+          // Mark as seen (Fire and forget)
           const seenInserts = finalQuestions
-            .filter(q => typeof q.id === 'string' && !q.id.startsWith('ai-') && !q.id.startsWith('fallback-'))
+            .filter(q => typeof q.id === 'string' && !q.id.startsWith('fallback-'))
             .map(q => ({
               student_id: studentId,
               question_id: q.id,
