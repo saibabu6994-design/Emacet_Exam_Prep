@@ -557,9 +557,17 @@ export default function ExamScreen() {
 
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden relative">
+          {/* Full-screen Submission Overlay */}
+          {isSubmitting && (
+            <div className="absolute inset-0 z-[100] flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm">
+              <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
+              <h2 className="text-2xl font-bold text-slate-800">Submitting Exam...</h2>
+              <p className="text-slate-500 mt-2 text-center max-w-sm">Please wait while we save your answers and generate your results. This may take a few seconds.</p>
+            </div>
+          )}
 
           {/* Question Area */}
-          <div className="flex-1 p-4 sm:p-6 overflow-hidden flex flex-col items-center">
+          <div className={`flex-1 p-4 sm:p-6 overflow-hidden flex flex-col items-center ${isSubmitting ? 'pointer-events-none blur-sm' : ''}`}>
             <div className="w-full max-w-4xl h-full flex flex-col gap-4">
               <QuestionCard
                 question={currentQ}
